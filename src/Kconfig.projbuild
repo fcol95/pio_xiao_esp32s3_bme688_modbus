@@ -1,4 +1,4 @@
-menu "Modbus Servevr Configuration"
+menu "Modbus Server Configuration"
 
     config MB_SLAVE_ADDR
         int "Modbus server slave address"
