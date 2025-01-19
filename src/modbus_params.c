@@ -15,6 +15,7 @@
 
 // Defines below are used to define register start address for each type of Modbus registers
 #define INPUT_REG_PARAMS_FIELD_OFFSET(field) ((uint16_t)(offsetof(input_reg_params_t, field) >> 1))
+#define HOLDING_REG_PARAMS_FIELD_OFFSET(field) ((uint16_t)(offsetof(holding_reg_params_t, field) >> 1))
 
 #define MODBUS_PARAMS_MUTEX_TIMEOUT_MS 100U
 
@@ -26,24 +27,47 @@ typedef struct
     float floats[MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT];
 } input_reg_params_t;
 #pragma pack(pop)
-
 typedef struct
 {
     QueueHandle_t floats[MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT];
 } input_reg_params_mutexes_t;
 
+#pragma pack(push, 1)
+typedef struct
+{
+    uint16_t uints[MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT];
+} holding_reg_params_t;
+#pragma pack(pop)
+typedef struct
+{
+    QueueHandle_t uints[MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT];
+} holding_reg_params_mutexes_t;
+
 input_reg_params_t input_reg_params = {0};
 input_reg_params_mutexes_t input_reg_params_mutexes = {0};
+
+holding_reg_params_t holding_reg_params = {0};
+holding_reg_params_mutexes_t holding_reg_params_mutexes = {0};
+
+// TODO: Add logic to have min/max values for parameters
 
 // Set register values into known state
 static esp_err_t setup_reg_data(void)
 {
     // Define initial state of parameters
-    for (uint8_t float_ind = 0; float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT; float_ind++)
+    for (ModbusParams_InReg_Float_t float_ind = (ModbusParams_InReg_Float_t)0; float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT; float_ind++)
     {
         input_reg_params.floats[float_ind] = NAN;
         input_reg_params_mutexes.floats[float_ind] = xSemaphoreCreateMutex();
         if (input_reg_params_mutexes.floats[float_ind] == NULL)
+            return ESP_FAIL;
+    }
+    // Define initial state of parameters
+    for (ModbusParams_HoldReg_UInt_t uint_ind = (ModbusParams_HoldReg_UInt_t)0; uint_ind < MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT; uint_ind++)
+    {
+        holding_reg_params.uints[uint_ind] = 0x0;
+        holding_reg_params_mutexes.uints[uint_ind] = xSemaphoreCreateMutex();
+        if (holding_reg_params_mutexes.uints[uint_ind] == NULL)
             return ESP_FAIL;
     }
     return ESP_OK;
@@ -81,6 +105,22 @@ esp_err_t get_input_register_float_reg_area(ModbusParams_InReg_Float_t index, mb
     return ESP_OK;
 }
 
+esp_err_t get_holding_register_uint_reg_area(ModbusParams_HoldReg_UInt_t index, mb_register_area_descriptor_t *const reg_area)
+{
+    if (index >= MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT)
+        return ESP_FAIL;
+    if (reg_area == NULL)
+        return ESP_FAIL;
+
+    reg_area->type = MB_PARAM_HOLDING;
+    reg_area->start_offset = (HOLDING_REG_PARAMS_FIELD_OFFSET(uints) + index * (sizeof(uint16_t) << 2));
+    reg_area->address = (void *)&holding_reg_params.uints[index];
+    reg_area->size = sizeof(uint16_t) << 2;
+    // reg_area->access = MB_ACCESS_RW;
+
+    return ESP_OK;
+}
+
 esp_err_t set_input_register_float(ModbusParams_InReg_Float_t index, float value)
 {
     if (index >= MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT)
@@ -95,6 +135,48 @@ esp_err_t set_input_register_float(ModbusParams_InReg_Float_t index, float value
         return ESP_FAIL;
     input_reg_params.floats[index] = value;
     xSemaphoreGive(input_reg_params_mutexes.floats[index]);
+    ret = mbc_slave_unlock(slave_handler_ctx);
+    if (ret != ESP_OK)
+        return ret;
+    return ESP_OK;
+}
+
+esp_err_t set_holding_register_uint(ModbusParams_HoldReg_UInt_t index, uint16_t value)
+{
+    if (index >= MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT)
+        return ESP_FAIL;
+
+    esp_err_t ret = ESP_OK;
+    ret = mbc_slave_lock(slave_handler_ctx);
+    if (ret != ESP_OK)
+        return ret;
+    // TODO: Is mutex lock really needed if mbc_slave_lock works?
+    if (xSemaphoreTake(holding_reg_params_mutexes.uints[index], pdMS_TO_TICKS(MODBUS_PARAMS_MUTEX_TIMEOUT_MS)) != pdTRUE)
+        return ESP_FAIL;
+    holding_reg_params.uints[index] = value;
+    xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
+    ret = mbc_slave_unlock(slave_handler_ctx);
+    if (ret != ESP_OK)
+        return ret;
+    return ESP_OK;
+}
+
+esp_err_t get_holding_register_uint(ModbusParams_HoldReg_UInt_t index, uint16_t *const value)
+{
+    if (index >= MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT)
+        return ESP_FAIL;
+    if (value == NULL)
+        return ESP_FAIL;
+
+    esp_err_t ret = ESP_OK;
+    ret = mbc_slave_lock(slave_handler_ctx);
+    if (ret != ESP_OK)
+        return ret;
+    // TODO: Is mutex lock really needed if mbc_slave_lock works?
+    if (xSemaphoreTake(holding_reg_params_mutexes.uints[index], pdMS_TO_TICKS(MODBUS_PARAMS_MUTEX_TIMEOUT_MS)) != pdTRUE)
+        return ESP_FAIL;
+    *value = holding_reg_params.uints[index];
+    xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
     ret = mbc_slave_unlock(slave_handler_ctx);
     if (ret != ESP_OK)
         return ret;

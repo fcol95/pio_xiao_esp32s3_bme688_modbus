@@ -10,6 +10,8 @@
 #include "bme68x.h"
 #include "modbus_params.h"
 
+#define AMBIENT_SENSE_DEFAULT_PERIOD_MS 1000U
+
 static const char *LOG_TAG = "ambient_sense";
 
 static esp_err_t i2c_master_init(void);
@@ -95,6 +97,15 @@ void ambient_sense_task(void *pvParameter)
         ESP_LOGI(LOG_TAG, "BME68x heater configuration succeeded");
     }
 
+    uint16_t task_period_ms = AMBIENT_SENSE_DEFAULT_PERIOD_MS;
+    esp_err_t ret_esp = ESP_OK;
+
+    ret_esp = set_holding_register_uint(AMBIENT_SENSE_PERIOD_MS, task_period_ms);
+    if (ret_esp != ESP_OK)
+    {
+        ESP_LOGE(LOG_TAG, "Failed to set modbus parameter AMBIENT_SENSE_PERIOD_MS!");
+    }
+
     while (1)
     {
         // Set sensor to forced mode
@@ -118,7 +129,6 @@ void ambient_sense_task(void *pvParameter)
             ESP_LOGE(LOG_TAG, "Failed to get sensor data");
         }
 
-        esp_err_t ret_esp = ESP_OK;
         ret_esp = set_input_register_float(AMBIENT_TEMP_DEGC, data.temperature);
         if (ret_esp != ESP_OK)
         {
@@ -137,8 +147,20 @@ void ambient_sense_task(void *pvParameter)
             ESP_LOGE(LOG_TAG, "Failed to updated modbus parameter AMBIENT_HUMI_PCT!");
         }
 
+        uint16_t new_task_period_ms;
+        ret_esp = get_holding_register_uint(AMBIENT_SENSE_PERIOD_MS, &new_task_period_ms);
+        if (ret_esp != ESP_OK)
+        {
+            ESP_LOGE(LOG_TAG, "Failed to get modbus parameter AMBIENT_SENSE_PERIOD_MS!");
+        }
+        else if (new_task_period_ms != 0 && task_period_ms != new_task_period_ms)
+        {
+            ESP_LOGI(LOG_TAG, "Measurement period updated from %d to %dms!", task_period_ms, new_task_period_ms);
+            task_period_ms = new_task_period_ms;
+        }
+
         // Wait for 1 second before the next read
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(task_period_ms));
     }
 }
 

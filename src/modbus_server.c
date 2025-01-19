@@ -223,7 +223,7 @@ static esp_err_t slave_init()
     // by mbc_slave_set_descriptor() API call then Modbus stack
     // will send exception response for this register area.
     // Initialization of Input Registers area
-    for (uint8_t float_ind = 0; float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT; float_ind++)
+    for (ModbusParams_InReg_Float_t float_ind = (ModbusParams_InReg_Float_t)0; float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT; float_ind++)
     {
         mb_register_area_descriptor_t reg_area; // Modbus register area descriptor structure
         ret = get_input_register_float_reg_area(float_ind, &reg_area);
@@ -237,6 +237,22 @@ static esp_err_t slave_init()
                            LOG_TAG,
                            "mbc_slave_set_descriptor fail for float index %d, returns(0x%x).",
                            float_ind, (int)ret);
+    }
+    // Initialization of Holding Registers area
+    for (ModbusParams_HoldReg_UInt_t uint_ind = (ModbusParams_HoldReg_UInt_t)0; uint_ind < MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT; uint_ind++)
+    {
+        mb_register_area_descriptor_t reg_area; // Modbus register area descriptor structure
+        ret = get_holding_register_uint_reg_area(uint_ind, &reg_area);
+        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+                           LOG_TAG,
+                           "get_holding_register_uint_reg_area fail for int index %d, returns(0x%x).",
+                           uint_ind, (int)ret);
+
+        ret = mbc_slave_set_descriptor(slave_handler, reg_area);
+        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+                           LOG_TAG,
+                           "mbc_slave_set_descriptor fail for int index %d, returns(0x%x).",
+                           uint_ind, (int)ret);
     }
     // Starts of modbus controller and stack
     ret = mbc_slave_start(slave_handler);

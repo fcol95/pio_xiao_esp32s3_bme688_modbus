@@ -1,10 +1,14 @@
 # Platformio XIAO ESP32S3 Modbus Slave Exploration
 This exploration project is to test the integration of esp-modbus in server(slave) configuration on the XIAO ESP32S3 connected on WIFI using the ESP-IDF example connection configuration.
 It forwards the data of a BME688 ambient sensor to three input registers starting at address 1.
+It also has a writable holding register at address 1 that sets the ambient sense measurement period (default 1000ms).
 Run ESP-IDF menuconfig to set WIFI SSID and password for the ESP32 to connect to your LAN before compiling and running.
 
-You can see the output with a modbus master software, as QModMaster.
-![QModMaster Test Output](doc/QModMaster_Output.png)
+You can see the sense data read with a modbus master software, as QModMaster.
+![QModMaster Test Sense Data Read](doc/QModMaster_Sense_Data_Read.png)
+
+You can see the sense period write:
+![QModMaster Test Sense Period Write](doc/QModMaster_Sense_Period_Write.png)
 
 # Seeed Xiao ESP32-S3 references:
 https://docs.platformio.org/en/latest//boards/espressif32/seeed_xiao_esp32s3.html
