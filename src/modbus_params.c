@@ -127,15 +127,18 @@ esp_err_t set_input_register_float(ModbusParams_InReg_Float_t index, float value
         return ESP_FAIL;
 
     esp_err_t ret = ESP_OK;
-    ret = mbc_slave_lock(slave_handler_ctx);
-    if (ret != ESP_OK)
-        return ret;
     // TODO: Is mutex lock really needed if mbc_slave_lock works?
     if (xSemaphoreTake(input_reg_params_mutexes.floats[index], pdMS_TO_TICKS(MODBUS_PARAMS_MUTEX_TIMEOUT_MS)) != pdTRUE)
         return ESP_FAIL;
+    ret = mbc_slave_lock(slave_handler_ctx);
+    if (ret != ESP_OK)
+    {
+        xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
+        return ret;
+    }
     input_reg_params.floats[index] = value;
-    xSemaphoreGive(input_reg_params_mutexes.floats[index]);
     ret = mbc_slave_unlock(slave_handler_ctx);
+    xSemaphoreGive(input_reg_params_mutexes.floats[index]);
     if (ret != ESP_OK)
         return ret;
     return ESP_OK;
@@ -147,15 +150,18 @@ esp_err_t set_holding_register_uint(ModbusParams_HoldReg_UInt_t index, uint16_t 
         return ESP_FAIL;
 
     esp_err_t ret = ESP_OK;
-    ret = mbc_slave_lock(slave_handler_ctx);
-    if (ret != ESP_OK)
-        return ret;
     // TODO: Is mutex lock really needed if mbc_slave_lock works?
     if (xSemaphoreTake(holding_reg_params_mutexes.uints[index], pdMS_TO_TICKS(MODBUS_PARAMS_MUTEX_TIMEOUT_MS)) != pdTRUE)
         return ESP_FAIL;
+    ret = mbc_slave_lock(slave_handler_ctx);
+    if (ret != ESP_OK)
+    {
+        xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
+        return ret;
+    }
     holding_reg_params.uints[index] = value;
-    xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
     ret = mbc_slave_unlock(slave_handler_ctx);
+    xSemaphoreGive(holding_reg_params_mutexes.uints[index]);
     if (ret != ESP_OK)
         return ret;
     return ESP_OK;
