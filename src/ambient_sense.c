@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 
 #include "bme68x.h"
+#include "modbus_params.h"
 
 static const char *LOG_TAG = "ambient_sense";
 
@@ -101,7 +102,6 @@ void ambient_sense_task(void *pvParameter)
         if (ret != BME68X_OK)
         {
             ESP_LOGE(LOG_TAG, "BME68x setting operation mode failed");
-            return;
         }
 
         // Wait for the measurement to complete
@@ -116,7 +116,25 @@ void ambient_sense_task(void *pvParameter)
         else
         {
             ESP_LOGE(LOG_TAG, "Failed to get sensor data");
-            return;
+        }
+
+        esp_err_t ret_esp = ESP_OK;
+        ret_esp = set_input_register_float(AMBIENT_TEMP_DEGC, data.temperature);
+        if (ret_esp != ESP_OK)
+        {
+            ESP_LOGE(LOG_TAG, "Failed to updated modbus parameter AMBIENT_TEMP_DEGC!");
+        }
+
+        ret_esp = set_input_register_float(AMBIENT_PRESSURE_HPA, data.pressure / 100.0f);
+        if (ret_esp != ESP_OK)
+        {
+            ESP_LOGE(LOG_TAG, "Failed to updated modbus parameter AMBIENT_PRESSURE_HPA!");
+        }
+
+        ret_esp = set_input_register_float(AMBIENT_HUMI_PCT, data.humidity);
+        if (ret_esp != ESP_OK)
+        {
+            ESP_LOGE(LOG_TAG, "Failed to updated modbus parameter AMBIENT_HUMI_PCT!");
         }
 
         // Wait for 1 second before the next read
