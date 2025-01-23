@@ -1,14 +1,13 @@
-#include <stdio.h>
 #include "sdkconfig.h"
+#include <stdio.h>
 
 #include "esp_err.h"
-#include "esp_log.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
-#include "esp_netif.h"
 #include "esp_mac.h"
+#include "esp_netif.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
 
 #include "mdns.h"
 #include "nvs_flash.h"
@@ -103,8 +102,7 @@ static void start_mdns_service(void)
     ESP_ERROR_CHECK(mdns_instance_name_set(MB_MDNS_INSTANCE("esp32_")));
 
     // structure with TXT records
-    mdns_txt_item_t serviceTxtData[] = {
-        {"board", "esp32"}};
+    mdns_txt_item_t serviceTxtData[] = {{"board", "esp32"}};
 
     // initialize service
     ESP_ERROR_CHECK(mdns_service_add(hostname, "_modbus", "_tcp", MB_MDNS_PORT, serviceTxtData, 1));
@@ -116,10 +114,7 @@ static void start_mdns_service(void)
     ESP_ERROR_CHECK(mdns_service_txt_item_set("_modbus", "_tcp", "mb_id", gen_id_str("\0", temp_str)));
 }
 
-static void stop_mdns_service(void)
-{
-    mdns_free();
-}
+static void stop_mdns_service(void) { mdns_free(); }
 
 #endif // CONFIG_MB_MDNS_IP_RESOLVER
 
@@ -131,17 +126,20 @@ static esp_err_t init_services(void)
         ESP_ERROR_CHECK(nvs_flash_erase());
         result = nvs_flash_init();
     }
-    MB_RETURN_ON_FALSE((result == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((result == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "nvs_flash_init fail, returns(0x%x).",
                        (int)result);
     result = esp_netif_init();
-    MB_RETURN_ON_FALSE((result == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((result == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "esp_netif_init fail, returns(0x%x).",
                        (int)result);
     result = esp_event_loop_create_default();
-    MB_RETURN_ON_FALSE((result == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((result == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "esp_event_loop_create_default fail, returns(0x%x).",
                        (int)result);
@@ -153,13 +151,15 @@ static esp_err_t init_services(void)
     // Read "Establishing Wi-Fi or Ethernet Connection" section in
     // examples/protocols/README.md for more information about this function.
     result = example_connect();
-    MB_RETURN_ON_FALSE((result == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((result == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "example_connect fail, returns(0x%x).",
                        (int)result);
 #if CONFIG_EXAMPLE_CONNECT_WIFI
     result = esp_wifi_set_ps(WIFI_PS_NONE);
-    MB_RETURN_ON_FALSE((result == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((result == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "esp_wifi_set_ps fail, returns(0x%x).",
                        (int)result);
@@ -172,22 +172,26 @@ static esp_err_t destroy_services(void)
     esp_err_t ret = ESP_OK;
 
     ret = example_disconnect();
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "example_disconnect fail, returns(0x%x).",
                        (int)ret);
     ret = esp_event_loop_delete_default();
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "esp_event_loop_delete_default fail, returns(0x%x).",
                        (int)ret);
     ret = esp_netif_deinit();
-    MB_RETURN_ON_FALSE((ret == ESP_OK || ret == ESP_ERR_NOT_SUPPORTED), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK || ret == ESP_ERR_NOT_SUPPORTED),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "esp_netif_deinit fail, returns(0x%x).",
                        (int)ret);
     ret = nvs_flash_deinit();
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "nvs_flash_deinit fail, returns(0x%x).",
                        (int)ret);
@@ -204,7 +208,8 @@ static esp_err_t slave_init()
 
     // Initialization of Modbus controller - Setup communication parameters and start stack
     esp_err_t ret = mbc_slave_create_tcp(&comm_info, &slave_handler);
-    MB_RETURN_ON_FALSE((ret == ESP_OK && slave_handler != NULL), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK && slave_handler != NULL),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "mbc_slave_create_tcp failed!");
 
@@ -212,10 +217,8 @@ static esp_err_t slave_init()
     mbc_slave_init_iface(slave_handler);
 
     // Init Modbus parameters and register area descriptors
-    ret = init_modbus_params(slave_handler);
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
-                       LOG_TAG,
-                       "init_modbus_params failed!");
+    ret = modbus_params_init(slave_handler);
+    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE, LOG_TAG, "modbus_params_init failed!");
     // The code below initializes Modbus register area descriptors
     // for Modbus Holding Registers, Input Registers, Coils and Discrete Inputs
     // Initialization should be done for each supported Modbus register area according to register map.
@@ -223,40 +226,56 @@ static esp_err_t slave_init()
     // by mbc_slave_set_descriptor() API call then Modbus stack
     // will send exception response for this register area.
     // Initialization of Input Registers area
-    for (ModbusParams_InReg_Float_t float_ind = (ModbusParams_InReg_Float_t)0; float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT; float_ind++)
+    for (ModbusParams_InReg_Float_t float_ind = (ModbusParams_InReg_Float_t)0;
+         float_ind < MODBUS_PARAMS_INPUT_REGISTER_FLOAT_COUNT;
+         float_ind++)
     {
         mb_register_area_descriptor_t reg_area; // Modbus register area descriptor structure
-        ret = get_input_register_float_reg_area(float_ind, &reg_area);
-        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
-                           LOG_TAG,
-                           "get_input_register_float_reg_area fail for float index %d, returns(0x%x).",
-                           float_ind, (int)ret);
+        ret = modbus_params_get_input_register_float_reg_area(float_ind, &reg_area);
+        MB_RETURN_ON_FALSE(
+            (ret == ESP_OK),
+            ESP_ERR_INVALID_STATE,
+            LOG_TAG,
+            "modbus_params_get_input_register_float_reg_area fail for input reg float index %d, returns(0x%x).",
+            float_ind,
+            (int)ret);
 
         ret = mbc_slave_set_descriptor(slave_handler, reg_area);
-        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+        MB_RETURN_ON_FALSE((ret == ESP_OK),
+                           ESP_ERR_INVALID_STATE,
                            LOG_TAG,
-                           "mbc_slave_set_descriptor fail for float index %d, returns(0x%x).",
-                           float_ind, (int)ret);
+                           "mbc_slave_set_descriptor fail for input reg float index %d, returns(0x%x).",
+                           float_ind,
+                           (int)ret);
     }
     // Initialization of Holding Registers area
-    for (ModbusParams_HoldReg_UInt_t uint_ind = (ModbusParams_HoldReg_UInt_t)0; uint_ind < MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT; uint_ind++)
+    for (ModbusParams_HoldReg_UInt_t uint_ind = (ModbusParams_HoldReg_UInt_t)0;
+         uint_ind < MODBUS_PARAMS_HOLDING_REGISTER_UINT_COUNT;
+         uint_ind++)
     {
         mb_register_area_descriptor_t reg_area; // Modbus register area descriptor structure
-        ret = get_holding_register_uint_reg_area(uint_ind, &reg_area);
-        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
-                           LOG_TAG,
-                           "get_holding_register_uint_reg_area fail for int index %d, returns(0x%x).",
-                           uint_ind, (int)ret);
+        ret = modbus_params_get_holding_register_uint_reg_area(uint_ind, &reg_area);
+        MB_RETURN_ON_FALSE(
+            (ret == ESP_OK),
+            ESP_ERR_INVALID_STATE,
+            LOG_TAG,
+            "modbus_params_get_holding_register_uint_reg_area fail for hold reg uint index %d, returns(0x%x).",
+            uint_ind,
+            (int)ret);
 
         ret = mbc_slave_set_descriptor(slave_handler, reg_area);
-        MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+        MB_RETURN_ON_FALSE((ret == ESP_OK),
+                           ESP_ERR_INVALID_STATE,
                            LOG_TAG,
-                           "mbc_slave_set_descriptor fail for int index %d, returns(0x%x).",
-                           uint_ind, (int)ret);
+                           "mbc_slave_set_descriptor fail for hold reg uint index %d, returns(0x%x).",
+                           uint_ind,
+                           (int)ret);
     }
+
     // Starts of modbus controller and stack
     ret = mbc_slave_start(slave_handler);
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "mbc_slave_start fail, returns(0x%x).",
                        (int)ret);
@@ -268,12 +287,14 @@ static esp_err_t slave_destroy(void)
 {
     esp_err_t ret = ESP_OK;
     ret = mbc_slave_stop(slave_handler);
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "mbc_slave_stop fail, returns(0x%x).",
                        (int)ret);
     ret = mbc_slave_delete(slave_handler);
-    MB_RETURN_ON_FALSE((ret == ESP_OK), ESP_ERR_INVALID_STATE,
+    MB_RETURN_ON_FALSE((ret == ESP_OK),
+                       ESP_ERR_INVALID_STATE,
                        LOG_TAG,
                        "mbc_slave_delete fail, returns(0x%x).",
                        (int)ret);
@@ -312,6 +333,13 @@ void modbus_server_task(void *pvParameter)
     ESP_LOGI(LOG_TAG, "Start modbus server loop...");
 
     // Currently this loop only log in verbose the requests from the master
+    /*TODO: Add a way to handle following error (happens when pymodbus master doesn't properly close/disconnect - i.e.
+script is killed):
+
+I (57756) port.utils: Socket (#58), accept client connection from address[port]: 192.168.10.30[62889]
+E (57756) mb_driver: 0x3fcb7a28, unable to open node: 192.168.10.30
+
+    */
     while (1)
     {
         // Check for read/write events of Modbus master for certain events
@@ -322,7 +350,8 @@ void modbus_server_task(void *pvParameter)
         if (reg_info.type & (MB_EVENT_HOLDING_REG_WR | MB_EVENT_HOLDING_REG_RD))
         {
             // Get parameter information from parameter queue
-            ESP_LOGV(LOG_TAG, "HOLDING %s (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
+            ESP_LOGV(LOG_TAG,
+                     "HOLDING %s (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
                      rw_str,
                      reg_info.time_stamp,
                      (unsigned)reg_info.mb_offset,
@@ -332,7 +361,8 @@ void modbus_server_task(void *pvParameter)
         }
         else if (reg_info.type & MB_EVENT_INPUT_REG_RD)
         {
-            ESP_LOGV(LOG_TAG, "INPUT READ (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
+            ESP_LOGV(LOG_TAG,
+                     "INPUT READ (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
                      reg_info.time_stamp,
                      (unsigned)reg_info.mb_offset,
                      (unsigned)reg_info.type,
@@ -341,7 +371,8 @@ void modbus_server_task(void *pvParameter)
         }
         else if (reg_info.type & MB_EVENT_DISCRETE_RD)
         {
-            ESP_LOGV(LOG_TAG, "DISCRETE READ (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
+            ESP_LOGV(LOG_TAG,
+                     "DISCRETE READ (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
                      reg_info.time_stamp,
                      (unsigned)reg_info.mb_offset,
                      (unsigned)reg_info.type,
@@ -350,7 +381,8 @@ void modbus_server_task(void *pvParameter)
         }
         else if (reg_info.type & (MB_EVENT_COILS_RD | MB_EVENT_COILS_WR))
         {
-            ESP_LOGV(LOG_TAG, "COILS %s (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
+            ESP_LOGV(LOG_TAG,
+                     "COILS %s (%" PRIu32 " us), ADDR:%u, TYPE:%u, INST_ADDR:0x%" PRIx32 ", SIZE:%u",
                      rw_str,
                      reg_info.time_stamp,
                      (unsigned)reg_info.mb_offset,
